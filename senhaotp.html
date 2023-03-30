@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Exemplo de senha OTP</title>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/2.0.2/sha.js"></script>
+	<script type="text/javascript">
+		// Implementação simples de HOTP para gerar senhas OTP
+		function hotp(secret, counter) {
+			var code = "0123456789abcdef";
+			var hmac = new jsSHA("SHA-1", "BYTES");
+			var key = b32tohex(secret);
+			var counter_bytes = intToBytes(counter);
+			hmac.setHMACKey(key, "HEX");
+			hmac.update(counter_bytes);
+			var hmacResult = hmac.getHMAC("HEX");
+			var offset = parseInt(hmacResult.substring(hmacResult.length - 1), 16);
+			var otp = (parseInt(hmacResult.substr(offset * 2, 8), 16) & 0x7fffffff) % 1000000;
+			return padLeft(otp.toString(), 6, "0");
+		}
+
+		// Converte uma string base32 em uma string hexadecimal
+		function b32tohex(b32) {
+			var base32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567=";
+			var bits = "";
+			var hex = "";
+			for (var i = 0; i < b32.length; i++) {
+				var val = base32.indexOf(b32.charAt(i));
+				if (val >= 0) {
+					bits += padLeft(val.toString(2), 5, "0");
+				}
+			}
+			for (var i = 0; i < bits.length - 3; i += 4) {
+				var chunk = bits.substr(i, 4);
+				hex = hex + parseInt(chunk, 2).toString(16);
+			}
+			return hex;
+		}
+
+		// Converte um número inteiro em um array de bytes
+		function intToBytes(num) {
+			var bytes = [];
+			for (var i = 7; i >= 0; i--) {
+				bytes[i] = num & 0xff;
+				num = num >> 8;
+			}
+			return bytes;
+		}
+
+		// Adiciona caracteres à esquerda até atingir um determinado comprimento
+		function padLeft(str, length, padChar) {
+			while (str.length < length) {
+				str = padChar + str;
+			}
+			return str;
+		}
+
+		// Função que é chamada quando o formulário é enviado
+		function onSubmit() {
+			var secret = document.getElementById("secret").value;
+			var counter = Math.floor(Date.now() / 30000);
+			var otp = hotp(secret, counter);
+			document.getElementById("otp").value = otp;
+			return false;
+		}
+	</script>
+</head>
+<body>
+	<h1>Exemplo de senha OTP</h1>
+	<form onsubmit="return onSubmit();">
+		<label for="secret">Chave secreta:</label>
+		<input type="text" id="secret" name="secret"><br>
+		<label for="otp">Senha OTP:</label>
+		<input type="text" id="otp" name="otp"><br>
+		<input type="submit" value="Gerar senha">
+	</form>
+</body>
+</html>
